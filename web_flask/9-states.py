@@ -1,37 +1,33 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep  1 14:42:23 2020
+""" a script that starts a Flask web application """
+from flask import Flask
+from flask import render_template
+from models import storage, State
 
-@author: Robinson Montes
-"""
-from models import storage
-from models.state import State
-from flask import Flask, render_template
 app = Flask(__name__)
 
 
 @app.teardown_appcontext
-def appcontext_teardown(self):
-    """use storage for fetching data from the storage engine
-    """
+def remove_session(exception):
+    """ After each request, it removes the current SQLAlchemy Session """
     storage.close()
 
 
 @app.route('/states', strict_slashes=False)
-def state_info():
-    """Display a HTML page inside the tag BODY"""
-    return render_template('7-states_list.html',
-                           states=storage.all(State))
+def render_states():
+    """ displays all states """
+    States = storage.all(State).values()
+    return render_template("9-states.html", States=States, one=None)
 
 
 @app.route('/states/<string:id>', strict_slashes=False)
-def state_id(id=None):
-    """Display a HTML page inside the tag BODY"""
-    return render_template('9-states.html',
-                           states=storage.all(State)
-                           .get('State.{}'.format(id)))
-
+def render_one_state(id):
+    """ displays one state if it exists """
+    key = "State." + id
+    one = None
+    if key in storage.all(State):
+        one = storage.all(State)[key]
+    return render_template("9-states.html", States=None, one=one)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
