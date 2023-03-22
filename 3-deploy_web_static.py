@@ -1,72 +1,56 @@
 #!/usr/bin/python3
+# -*- coding: utf-8 -*-
 """
-a Fabric script that generates a .tgz archive
-from the contents of the web_static folder of the AirBnB Clone repo
+Created on Mon Aug 13 14:21:54 2020
+@author: Robinson Montes
 """
-from fabric.operations import local, put, run
-from datetime import datetime as d
-from fabric.api import *
+from fabric.api import local, put, run, env
+from datetime import datetime
 
-env.hosts = ['34.74.120.150', '54.173.196.75']
-created_archive = None
+env.user = 'ubuntu'
+env.hosts = ['35.227.35.75', '100.24.37.33']
 
 
 def do_pack():
-    """ generates a .tgz archive """
-    name = "versions/web_static_" + str(d.now().year)
-    name += str(d.now().month) + str(d.now().day) + str(d.now().hour)
-    name += str(d.now().minute) + str(d.now().second) + ".tgz"
-    result = local("mkdir -p versions; tar -cvzf \"%s\" web_static" % name)
-    if result.failed:
-        return None
-    else:
+    """
+    Targging project directory into a packages as .tgz
+    """
+    now = datetime.now().strftime("%Y%m%d%H%M%S")
+    local('sudo mkdir -p ./versions')
+    path = './versions/web_static_{}'.format(now)
+    local('sudo tar -czvf {}.tgz web_static'.format(path))
+    name = '{}.tgz'.format(path)
+    if name:
         return name
+    else:
+        return None
 
 
 def do_deploy(archive_path):
-    """ uploads the archive to servers """
-    destination = "/tmp/" + archive_path.split("/")[-1]
-    result = put(archive_path, "/tmp/")
-    if result.failed:
+    """Deploy the boxing package tgz file
+    """
+    try:
+        archive = archive_path.split('/')[-1]
+        path = '/data/web_static/releases/' + archive.strip('.tgz')
+        current = '/data/web_static/current'
+        put(archive_path, '/tmp')
+        run('mkdir -p {}'.format(path))
+        run('tar -xzf /tmp/{} -C {}'.format(archive, path))
+        run('rm /tmp/{}'.format(archive))
+        run('mv {}/web_static/* {}'.format(path, path))
+        run('rm -rf {}/web_static'.format(path))
+        run('rm -rf {}'.format(current))
+        run('ln -s {} {}'.format(path, current))
+        print('New version deployed!')
+        return True
+    except:
         return False
-    filename = archive_path.split("/")[-1]
-    f = filename.split(".")[0]
-    directory = "/data/web_static/releases/" + f
-    run_res = run("mkdir -p \"%s\"" % directory)
-    if run_res.failed:
-        return False
-    run_res = run("tar -xzf %s -C %s" % (destination, directory))
-    if run_res.failed:
-        return False
-    run_res = run("rm %s" % destination)
-    if run_res:
-        return False
-    web = directory + "/web_static/*"
-    run_res = run("mv %s %s" % (web, directory))
-    if run_res.failed:
-        return False
-    web = web[0:-2]
-    run_res = run("rm -rf %s" % web)
-    if run_res.failed:
-        return False
-    run_res = run("rm -rf /data/web_static/current")
-    if run_res.failed:
-        return False
-    run_res = run("ln -s %s /data/web_static/current" % directory)
-    if run_res.failed:
-        return False
-    return True
 
 
 def deploy():
-    """ creates an archive and uploads it to servers"""
-    global created_archive
-    if created_archive is None:
-        name = do_pack()
-        if name is None:
-            return False
-        else:
-            created_archive = name
-        return do_deploy(name)
-    else:
-        return do_deploy(created_archive)
+    """
+    A function to call do_pack and do_deploy
+    """
+    archive_path = do_pack()
+    answer = do_deploy(archive_path)
+    return answer
