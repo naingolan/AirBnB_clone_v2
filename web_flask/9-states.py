@@ -1,33 +1,40 @@
 #!/usr/bin/python3
-""" a script that starts a Flask web application """
+"""Starts a Flask web application.
+The application listens on 0.0.0.0, port 5000.
+Routes:
+    /states: HTML page with a list of all State objects.
+    /states/<id>: HTML page displaying the given state with <id>.
+"""
+from models import storage
 from flask import Flask
 from flask import render_template
-from models import storage, State
 
 app = Flask(__name__)
 
 
+@app.route("/states", strict_slashes=False)
+def states():
+    """Displays an HTML page with a list of all States.
+    States are sorted by name.
+    """
+    states = storage.all("State")
+    return render_template("9-states.html", state=states)
+
+
+@app.route("/states/<id>", strict_slashes=False)
+def states_id(id):
+    """Displays an HTML page with info about <id>, if it exists."""
+    for state in storage.all("State").values():
+        if state.id == id:
+            return render_template("9-states.html", state=state)
+    return render_template("9-states.html")
+
+
 @app.teardown_appcontext
-def remove_session(exception):
-    """ After each request, it removes the current SQLAlchemy Session """
+def teardown(exc):
+    """Remove the current SQLAlchemy session."""
     storage.close()
 
 
-@app.route('/states', strict_slashes=False)
-def render_states():
-    """ displays all states """
-    States = storage.all(State).values()
-    return render_template("9-states.html", States=States, one=None)
-
-
-@app.route('/states/<string:id>', strict_slashes=False)
-def render_one_state(id):
-    """ displays one state if it exists """
-    key = "State." + id
-    one = None
-    if key in storage.all(State):
-        one = storage.all(State)[key]
-    return render_template("9-states.html", States=None, one=one)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0")

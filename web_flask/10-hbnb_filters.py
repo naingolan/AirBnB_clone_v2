@@ -1,25 +1,30 @@
 #!/usr/bin/python3
-""" a script that starts a Flask web application """
+"""Starts a Flask web application.
+The application listens on 0.0.0.0, port 5000.
+Routes:
+    /hbnb_filters: HBnB HTML filters page.
+"""
+from models import storage
 from flask import Flask
 from flask import render_template
-from models import storage, State, Amenity
 
 app = Flask(__name__)
 
 
+@app.route("/hbnb_filters", strict_slashes=False)
+def hbnb_filters():
+    """Displays the main HBnB filters HTML page."""
+    states = storage.all("State")
+    amenities = storage.all("Amenity")
+    return render_template("10-hbnb_filters.html",
+                           states=states, amenities=amenities)
+
+
 @app.teardown_appcontext
-def remove_session(exception):
-    """ After each request, it removes the current SQLAlchemy Session """
+def teardown(exc):
+    """Remove the current SQLAlchemy session."""
     storage.close()
 
 
-@app.route('/hbnb_filters', strict_slashes=False)
-def render_states_amenities():
-    """ displays states and cities """
-    States = storage.all(State).values()
-    Amenities = storage.all(Amenity).values()
-    return render_template("10-hbnb_filters.html", States=States, Amenities=Amenities)
-
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0")
